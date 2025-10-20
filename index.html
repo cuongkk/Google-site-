@@ -2,74 +2,86 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <title>Đọc PDF - Bài tập tổng hợp</title>
+    <title>Trình đọc PDF động</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
       body {
         font-family: sans-serif;
-        background: #f2f2f2;
         text-align: center;
-        padding: 20px;
+        background: #f4f4f4;
       }
-      canvas {
+      #pdf-canvas {
         border: 1px solid #999;
-        box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
         margin-top: 10px;
         background: white;
-      }
-      #controls {
-        margin-top: 15px;
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
       }
       button {
-        padding: 8px 16px;
-        margin: 0 8px;
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        padding: 8px;
+        border: none;
+        border-radius: 50%;
+        background: black;
+        color: white;
         font-size: 16px;
         cursor: pointer;
-        border: none;
-        border-radius: 6px;
-        background: #4caf50;
-        color: white;
-        transition: background 0.3s;
       }
       button:hover {
-        background: #45a049;
+        opacity: 0.4;
+      }
+      .inner-wrap {
+        display: inline-block;
+        position: relative;
+      }
+      .prev-button {
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .next-button {
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
       }
     </style>
   </head>
   <body>
-    <h2>📘 Bài tập tổng hợp - PDF Viewer</h2>
-    <canvas id="pdf-canvas"></canvas>
-    <div id="controls">
-      <button id="prev-page">⬅ Trang trước</button>
-      <span id="page-info"></span>
-      <button id="next-page">Trang sau ➡</button>
+    <p id="file-name"></p>
+    <div class="inner-wrap">
+      <canvas id="pdf-canvas"></canvas>
+      <button id="prev-page" class="prev-button">⬅</button>
+      <button id="next-page" class="next-button">➡</button>
     </div>
 
     <script>
-      const url = "Bai tap tong hop.pdf"; // file PDF để đọc
-      let pdfDoc = null;
-      let pageNum = 1;
+      // Lấy tên file từ URL
+      const params = new URLSearchParams(window.location.search);
+      const fileName = params.get("file") || "Bai tap tong hop.pdf"; // mặc định nếu không có
+
       const canvas = document.getElementById("pdf-canvas");
       const ctx = canvas.getContext("2d");
+      let pdfDoc = null,
+        pageNum = 1;
 
-      // tải PDF
-      pdfjsLib.getDocument(url).promise.then((pdf) => {
-        pdfDoc = pdf;
-        renderPage(pageNum);
-      });
+      // Tải file PDF từ tên
+      pdfjsLib
+        .getDocument(fileName)
+        .promise.then((pdf) => {
+          pdfDoc = pdf;
+          renderPage(pageNum);
+        })
+        .catch((err) => {
+          document.getElementById("file-name").textContent = "❌ Không tìm thấy file: " + fileName;
+        });
 
       function renderPage(num) {
         pdfDoc.getPage(num).then((page) => {
           const viewport = page.getViewport({ scale: 1.4 });
-          canvas.height = viewport.height;
           canvas.width = viewport.width;
-
-          const renderCtx = {
-            canvasContext: ctx,
-            viewport: viewport,
-          };
-          page.render(renderCtx);
-          document.getElementById("page-info").textContent = `Trang ${num} / ${pdfDoc.numPages}`;
+          canvas.height = viewport.height;
+          page.render({ canvasContext: ctx, viewport });
         });
       }
 
