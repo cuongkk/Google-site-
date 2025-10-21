@@ -46,13 +46,14 @@ body {
 .header {
   width: 100%;
   margin-bottom: 30px;
+  background-color: #4858ef;
 }
 
 .header .container {
   width: 100%;
 }
 .header .inner-wrap {
-  background-color: #4858ef;
+  padding: 0 20px;
   height: 60px;
   display: flex;
   align-items: center;
@@ -60,6 +61,17 @@ body {
   gap: 10px;
   border-radius: 0 0 10px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header .inner-wrap img {
+  width: 40px;
+  height: auto;
+}
+
+@media (max-width: 575.98px) {
+  .header .inner-wrap {
+    justify-content: center;
+  }
 }
 /* End Header */
 
