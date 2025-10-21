@@ -1,7 +1,7 @@
-const button = document.querySelectorAll(".inner-group");
+// const button = document.querySelectorAll(".inner-group");
 
-button.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    btn.style.backgroundColor = "red";
-  });
-});
+// button.forEach((btn) => {
+//   btn.addEventListener("click", () => {
+//     btn.style.backgroundColor = "red";
+//   });
+// });
