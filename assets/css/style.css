@@ -204,24 +204,14 @@ body.page {
   height: calc(100vh - 40px);
   overflow: hidden;
   display: grid;
+  place-items: start center;
   padding: 8px 0;
-  margin-bottom: 40px;
+  margin-top: 20px;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   touch-action: pan-y;
   min-height: 0;
-}
-
-#page-scroll {
-  width: 100%;
-  height: calc(100dvh - 40px);
-  overflow: auto;
-  place-items: start center;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-  margin-top: 20px;
 }
 
 canvas#pdfCanvas {
