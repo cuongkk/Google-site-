@@ -172,7 +172,6 @@ body.page {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   background: #0b0c0e;
   color: #e9eaee;
-  touch-action: pan-y;
 }
 
 .page-header {
