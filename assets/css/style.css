@@ -177,6 +177,8 @@ body.page {
   flex-direction: column;
   justify-content: space-between;
   min-height: 0;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Header */
@@ -199,10 +201,9 @@ body.page {
 }
 
 #page-container {
-  height: calc(100vh - 90px);
-  overflow: auto;
+  height: calc(100vh - 40px);
+  overflow: hidden;
   display: grid;
-  place-items: end center;
   padding: 8px 0;
   margin-bottom: 40px;
   overflow: auto;
@@ -212,17 +213,26 @@ body.page {
   min-height: 0;
 }
 
+#page-scroll {
+  width: 100%;
+  height: calc(100dvh - 40px);
+  overflow: auto;
+  place-items: start center;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  margin-top: 20px;
+}
+
 canvas#pdfCanvas {
   display: block;
   max-width: 100%;
   height: auto;
   background: #fff;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-  pointer-events: none;
-  touch-action: pan-y;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-user-drag: none;
+  touch-action: auto; /* cho phép pinch zoom */
 }
 
 #loader {
