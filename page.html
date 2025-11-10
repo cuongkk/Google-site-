@@ -3,9 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes, maximum-scale=5" />
-    <title>PDF Viewer – Swipe Left/Right</title>
+    <title>PDF Viewer – Swipe Left/Right (Fixed)</title>
 
+    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <style>
@@ -34,7 +36,8 @@
         background: var(--panel);
         position: fixed;
         top: 0;
-        inset-inline: 0;
+        left: 0;
+        right: 0;
         z-index: 10;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       }
@@ -52,6 +55,8 @@
         scroll-behavior: smooth;
         align-items: center;
         margin-top: 50px;
+        -ms-overflow-style: none; /* IE/Edge */
+        scrollbar-width: none; /* Firefox */
       }
       #page-container::-webkit-scrollbar {
         display: none;
@@ -65,9 +70,10 @@
         background: #fff;
         border-radius: 6px;
         box-shadow: 0 0 0 1px var(--border);
-        max-width: 90vw;
+        max-width: 90vw; /* đảm bảo khớp với getPageCssWidth() */
         max-height: 90vh;
       }
+
       #loader {
         position: fixed;
         top: 60px;
@@ -78,6 +84,7 @@
         padding: 6px 10px;
         border-radius: 8px;
         display: none;
+        z-index: 20;
       }
     </style>
   </head>
@@ -87,72 +94,142 @@
     <div id="page-container"></div>
 
     <script>
-      (async () => {
-        const stored = localStorage.getItem("selectedFile");
-        const data = stored ? JSON.parse(stored) : null;
-        const BASE_URL = "https://cuongkk.github.io/Tai-lieu-/";
-        const DEFAULT_FILE = data ? data.file + ".pdf" : "";
-        if (data) document.getElementById("fileName").textContent = data.name || "—";
+      (function () {
+        // ====== File info ======
+        var stored = localStorage.getItem("selectedFile");
+        var data = stored ? JSON.parse(stored) : null;
+        var BASE_URL = "https://cuongkk.github.io/Tai-lieu-/";
+        var DEFAULT_FILE = data ? data.file + ".pdf" : "";
+        if (data) {
+          var nameEl = document.getElementById("fileName");
+          nameEl.textContent = data.name || "—";
+          document.title = data.name || document.title;
+        }
+        function getFileFromQuery() {
+          try {
+            var u = new URL(window.location.href);
+            return u.searchParams.get("file");
+          } catch (e) {
+            return null;
+          }
+        }
+        var FILE_NAME = getFileFromQuery() || DEFAULT_FILE;
+        var PDF_URL = FILE_NAME ? new URL(FILE_NAME, BASE_URL).toString() : null;
 
-        const u = new URL(window.location.href);
-        const FILE_NAME = u.searchParams.get("file") || DEFAULT_FILE;
-        const PDF_URL = FILE_NAME ? new URL(FILE_NAME, BASE_URL).toString() : null;
+        // ====== PDF.js worker ======
+        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        }
 
-        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        // ====== DOM ======
+        var container = document.getElementById("page-container");
+        var loader = document.getElementById("loader");
 
-        const container = document.getElementById("page-container");
-        const loader = document.getElementById("loader");
+        // ====== State ======
+        var pdfDoc = null;
+        var totalPages = 0;
+        var currentPage = 1;
 
-        let pdfDoc = null;
-        let totalPages = 0;
-        let currentPage = 1;
-        const bitmapCache = new Map();
-
+        // ====== Helpers ======
         function showLoader(on) {
           loader.style.display = on ? "block" : "none";
         }
-
         function clamp(v, min, max) {
           return Math.min(Math.max(v, min), max);
         }
-
-        async function renderPage(num, canvas) {
-          const page = await pdfDoc.getPage(num);
-          const vp1 = page.getViewport({ scale: 1 });
-          const dpr = Math.max(1, window.devicePixelRatio || 1);
-          const scale = (container.clientWidth / vp1.width) * dpr;
-          const viewport = page.getViewport({ scale });
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext("2d");
-          await page.render({ canvasContext: ctx, viewport }).promise;
+        function getPageCssWidth() {
+          var vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+          return Math.floor(vw * 0.9); // 90% bề rộng viewport
         }
 
-        async function loadPdf(url) {
-          showLoader(true);
-          const loading = window.pdfjsLib.getDocument({ url });
-          pdfDoc = await loading.promise;
-          totalPages = pdfDoc.numPages;
-          container.innerHTML = "";
-          for (let i = 1; i <= totalPages; i++) {
-            const c = document.createElement("canvas");
-            c.className = "pageCanvas";
-            container.appendChild(c);
-            await renderPage(i, c);
+        // Render 1 trang vào canvas (theo chiều rộng màn hình)
+        function renderPage(num, canvas) {
+          return pdfDoc.getPage(num).then(function (page) {
+            var vp1 = page.getViewport({ scale: 1 });
+            var dpr = Math.max(1, window.devicePixelRatio || 1);
+            var cssW = getPageCssWidth();
+            var scale = (cssW / vp1.width) * dpr;
+            var viewport = page.getViewport({ scale: scale });
+
+            // pixel render
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            // kích thước CSS ổn định ngay từ đầu
+            canvas.style.width = cssW + "px";
+            canvas.style.height = Math.floor(cssW * (vp1.height / vp1.width)) + "px";
+
+            var ctx = canvas.getContext("2d", { alpha: false });
+            return page.render({ canvasContext: ctx, viewport: viewport }).promise;
+          });
+        }
+
+        function loadPdf(url) {
+          if (!url) {
+            alert('Không có URL PDF. Hãy set localStorage "selectedFile" hoặc thêm ?file=... vào URL.');
+            return;
           }
-          showLoader(false);
+          showLoader(true);
+          var loading = window.pdfjsLib.getDocument({ url: url });
+          loading.promise
+            .then(function (doc) {
+              pdfDoc = doc;
+              totalPages = pdfDoc.numPages;
+              container.innerHTML = "";
+
+              // Tạo tất cả canvas, set kích thước CSS trước để không giật
+              var cssW = getPageCssWidth();
+              var placeholderH = Math.floor(cssW * 1.414213562); // gần A4
+              var i;
+              for (i = 1; i <= totalPages; i++) {
+                var c = document.createElement("canvas");
+                c.className = "pageCanvas";
+                c.style.width = cssW + "px";
+                c.style.height = placeholderH + "px";
+                container.appendChild(c);
+              }
+
+              // Render tuần tự từng trang
+              var index = 0;
+              function renderNext() {
+                if (index >= totalPages) {
+                  showLoader(false);
+                  // scroll tới trang đầu tiên
+                  if (container.children[0]) {
+                    container.children[0].scrollIntoView({ behavior: "instant", inline: "center" });
+                  }
+                  return;
+                }
+                var canvas = container.children[index];
+                renderPage(index + 1, canvas)
+                  .then(function () {
+                    index += 1;
+                    renderNext();
+                  })
+                  .catch(function (err) {
+                    console.error("Render error at page", index + 1, err);
+                    index += 1;
+                    renderNext();
+                  });
+              }
+              renderNext();
+            })
+            .catch(function (err) {
+              console.error("Load PDF error:", err);
+              alert("Không tải được PDF. Kiểm tra BASE_URL/FILE_NAME hoặc CORS.");
+              showLoader(false);
+            });
         }
 
-        // Vuốt trái/phải để chuyển trang
-        let startX = 0,
-          startTime = 0,
-          touchActive = false;
-        const SWIPE_DIST = 60;
-        const SWIPE_TIME = 600;
+        // Vuốt trái/phải để chuyển trang (theo chiều ngang)
+        var startX = 0;
+        var startTime = 0;
+        var touchActive = false;
+        var SWIPE_DIST = 60; // px
+        var SWIPE_TIME = 600; // ms
 
         container.addEventListener(
           "touchstart",
-          (e) => {
+          function (e) {
             if (e.touches.length !== 1) return;
             touchActive = true;
             startX = e.touches[0].clientX;
@@ -163,22 +240,65 @@
 
         container.addEventListener(
           "touchend",
-          (e) => {
+          function (e) {
             if (!touchActive) return;
             touchActive = false;
-            const dx = e.changedTouches[0].clientX - startX;
-            const dt = Date.now() - startTime;
+            var dx = e.changedTouches[0].clientX - startX;
+            var dt = Date.now() - startTime;
             if (Math.abs(dx) > SWIPE_DIST && dt < SWIPE_TIME) {
-              if (dx < 0 && currentPage < totalPages) currentPage++;
-              else if (dx > 0 && currentPage > 1) currentPage--;
-              const el = container.children[currentPage - 1];
-              if (el) el.scrollIntoView({ behavior: "smooth", inline: "center" });
+              if (dx < 0 && currentPage < totalPages) {
+                currentPage++;
+              } else if (dx > 0 && currentPage > 1) {
+                currentPage--;
+              }
+              var el = container.children[currentPage - 1];
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", inline: "center" });
+              }
             }
           },
           { passive: true }
         );
 
-        if (PDF_URL) await loadPdf(PDF_URL);
+        // Re-render theo chiều rộng màn hình khi resize/orientation
+        var resizeTimer = null;
+        window.addEventListener("resize", function () {
+          if (!pdfDoc) return;
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(function () {
+            showLoader(true);
+            var canvases = Array.prototype.slice.call(container.children);
+            var i;
+            function rerenderAll(idx) {
+              if (idx >= canvases.length) {
+                var el = container.children[currentPage - 1];
+                if (el) {
+                  el.scrollIntoView({ behavior: "instant", inline: "center" });
+                }
+                showLoader(false);
+                return;
+              }
+              renderPage(idx + 1, canvases[idx])
+                .then(function () {
+                  rerenderAll(idx + 1);
+                })
+                .catch(function () {
+                  rerenderAll(idx + 1);
+                });
+            }
+            rerenderAll(0);
+          }, 120);
+        });
+        window.addEventListener("orientationchange", function () {
+          setTimeout(function () {
+            window.dispatchEvent(new Event("resize"));
+          }, 200);
+        });
+
+        // Start
+        if (PDF_URL) {
+          loadPdf(PDF_URL);
+        }
       })();
     </script>
   </body>
