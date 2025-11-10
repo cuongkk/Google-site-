@@ -223,17 +223,18 @@
   });
 
   let resizeTimer = null;
-  let lastWidth = containerEl.clientWidth;
-  const w = containerEl.clientWidth;
-  if (Math.abs(w - lastWidth) < 8) return;
-  lastWidth = w;
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    if (pdfDoc) renderPage(currentPage);
-  }, 150);
+  window.addEventListener("resize", () => {
+    if (!pdfDoc) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      renderPage(currentPage);
+    }, 120);
+  });
+
   window.addEventListener("orientationchange", () => {
-    lastWidth = 0;
-    if (pdfDoc) renderPage(currentPage);
+    if (pdfDoc) {
+      setTimeout(() => renderPage(currentPage), 200);
+    }
   });
 
   loadPdf(PDF_URL);
