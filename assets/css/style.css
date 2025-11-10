@@ -173,6 +173,9 @@ body.page {
   background: #0b0c0e;
   color: #e9eaee;
   touch-action: pan-y;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 /* Header */
@@ -194,29 +197,27 @@ body.page {
   opacity: 0.9;
 }
 
-/* Khung trang PDF (cuộn ở đây) */
 #page-container {
-  height: calc(100% - 90px); /* 50 header + 40 footer */
+  height: calc(100% - 90px);
   overflow: auto;
-  display: grid; /* canh giữa canvas theo cả 2 chiều */
-  place-items: start center; /* top-center */
+  display: grid;
+  place-items: end center;
   padding: 8px 0;
+  margin-bottom: 40px;
 }
 
-/* Canvas hiển thị PDF */
 canvas#pdfCanvas {
   display: block;
   max-width: 100%;
-  height: auto; /* giữ tỉ lệ */
+  height: auto;
   background: #fff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
-/* Loader phủ giữa khung khi render */
 #loader {
   display: none;
-  position: sticky; /* bám vị trí khi cuộn */
-  top: 12px; /* nằm phía trên canvas */
+  position: sticky;
+  top: 12px;
   justify-self: center;
   padding: 8px 12px;
   background: #1a1d26;
