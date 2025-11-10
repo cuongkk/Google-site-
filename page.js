@@ -54,8 +54,7 @@
       pageCountEl.textContent = totalPages || 0;
     }
 
-    // ---- Render
-    async function renderPage(num, fitMode = null) {
+    async function renderPage(num) {
       if (!pdfDoc) return;
 
       if (rendering) {
@@ -68,21 +67,26 @@
       try {
         const page = await pdfDoc.getPage(num);
 
+        const containerEl = document.getElementById("container");
+        const headerEl = document.querySelector("header"); // dùng nếu bạn muốn fit theo chiều cao ở nơi khác
         let viewport = page.getViewport({ scale: 1.0 });
-        const containerW = document.getElementById("container").clientWidth - 32;
-        const containerH = window.innerHeight - document.querySelector(".page-header").offsetHeight - 32;
 
-        if (fitMode === "width") {
-          scale = clamp(containerW / viewport.width, 0.25, 4);
-        } else if (fitMode === "page") {
-          const sW = containerW / viewport.width;
-          const sH = containerH / viewport.height;
-          scale = clamp(Math.min(sW, sH), 0.25, 4);
-        }
+        const containerW = Math.max(1, containerEl.clientWidth - 16);
+        const cssScale = clamp(containerW / viewport.width, 0.25, 4);
 
-        viewport = page.getViewport({ scale });
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        const outputScale = dpr;
+
+        viewport = page.getViewport({ scale: cssScale * outputScale });
+
+        const renderWidth = Math.floor(viewport.width);
+        const renderHeight = Math.floor(viewport.height);
+        canvas.width = renderWidth;
+        canvas.height = renderHeight;
+        canvas.style.width = Math.floor(renderWidth / outputScale) + "px";
+        canvas.style.height = Math.floor(renderHeight / outputScale) + "px";
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
 
         await page.render({ canvasContext: ctx, viewport }).promise;
 
@@ -94,10 +98,13 @@
       } finally {
         rendering = false;
         showLoader(false);
+
         if (pendingPage != null && pendingPage !== currentPage) {
           const next = pendingPage;
           pendingPage = null;
           renderPage(next);
+        } else {
+          pendingPage = null;
         }
       }
     }
@@ -107,7 +114,6 @@
       renderPage(num);
     }
 
-    // ---- Load PDF theo URL đã ghép từ JS
     async function loadPdf(url) {
       try {
         showLoader(true);
@@ -125,7 +131,6 @@
       }
     }
 
-    // ---- Sự kiện
     prevBtn.addEventListener("click", () => queueRender(currentPage - 1));
     nextBtn.addEventListener("click", () => queueRender(currentPage + 1));
     pageInput.addEventListener("change", (e) => {
@@ -176,7 +181,28 @@
       if (pdfDoc) renderPage(currentPage);
     });
 
-    // ---- Khởi chạy
+    let lastWidth = document.getElementById("container").clientWidth;
+    let resizeTimer = null;
+
+    function scheduleRerender() {
+      if (!pdfDoc) return;
+
+      const w = document.getElementById("container").clientWidth;
+      if (Math.abs(w - lastWidth) < 8) return;
+      lastWidth = w;
+
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        renderPage(currentPage);
+      }, 150);
+    }
+
+    window.addEventListener("resize", scheduleRerender);
+    window.addEventListener("orientationchange", () => {
+      lastWidth = 0;
+      scheduleRerender();
+    });
+
     loadPdf(PDF_URL);
   }
 })();
