@@ -1,6 +1,6 @@
 const listButton = document.querySelector(".inner-list");
 
-if (true) {
+if (listButton) {
   const buttons = listButton.querySelectorAll(".inner-group");
 
   buttons.forEach((btn) => {
