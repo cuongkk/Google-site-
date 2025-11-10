@@ -10,7 +10,7 @@ body {
 }
 
 .inner-background {
-  position: absolute;
+  position: fixed;
   width: 100%;
   top: 0;
   overflow: hidden;
@@ -119,7 +119,7 @@ body {
   background-color: #f9f8fe;
   border-radius: 10px;
   width: 100%;
-  padding: 50px;
+  padding: 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -145,6 +145,12 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+@media (max-width: 400.98px) {
+  .section-1 .inner-wrap .inner-list {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
 /* End Section-1 */
 
 .footer {
@@ -153,7 +159,6 @@ body {
   background-color: white;
   border-radius: 10px;
   width: 100%;
-  margin-top: 30px;
   padding: 20px 0;
   text-align: center;
   font-size: 14px;
