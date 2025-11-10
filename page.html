@@ -35,10 +35,12 @@
       }
 
       .page-header {
+        padding: 0 12px;
         height: 50px;
         display: flex;
         justify-content: center;
         align-items: center;
+        text-align: center;
         gap: 8px;
         background: var(--panel);
         position: fixed;
@@ -95,12 +97,30 @@
         display: none;
         z-index: 20;
       }
+      #page-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 40px;
+        background: var(--panel);
+        color: var(--fg);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 15px;
+        border-top: 1px solid var(--border);
+        z-index: 10;
+      }
     </style>
   </head>
   <body>
     <div class="page-header"><span id="fileName" class="fileName">—</span></div>
     <div id="loader">Đang tải…</div>
     <div id="page-container"></div>
+    <div id="page-footer">
+      <span id="pageIndicator">Trang 0 / 0</span>
+    </div>
 
     <script>
       (function () {
@@ -153,6 +173,14 @@
           return Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
         }
 
+        //Footer
+        var pageIndicator = document.getElementById("pageIndicator");
+
+        function updatePageIndicator() {
+          if (!pageIndicator) return;
+          pageIndicator.textContent = currentPage + " / " + totalPages;
+        }
+
         // Fit trang vào cả chiều rộng & chiều cao hiện có
         function renderPage(num, canvas) {
           return pdfDoc.getPage(num).then(function (page) {
@@ -196,6 +224,7 @@
               pdfDoc = doc;
               totalPages = pdfDoc.numPages;
               container.innerHTML = "";
+              updatePageIndicator();
 
               // Tạo canvas placeholder theo viewport để không giật
               var i,
@@ -278,6 +307,7 @@
               var el = container.children[currentPage - 1];
               if (el) {
                 el.scrollIntoView({ behavior: "smooth", inline: "center" });
+                updatePageIndicator();
               }
             }
           },
@@ -299,6 +329,7 @@
                 var el = container.children[currentPage - 1];
                 if (el) {
                   el.scrollIntoView({ behavior: "auto", inline: "center" });
+                  updatePageIndicator();
                 }
                 showLoader(false);
                 return;
