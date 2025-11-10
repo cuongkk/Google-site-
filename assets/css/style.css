@@ -205,6 +205,7 @@ body.page {
   place-items: end center;
   padding: 8px 0;
   margin-bottom: 40px;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   touch-action: pan-y;
@@ -217,10 +218,11 @@ canvas#pdfCanvas {
   height: auto;
   background: #fff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-  touch-action: pan-y; /* ưu tiên dùng chuẩn */
-  -webkit-user-select: none; /* tránh select ảo gây delay */
-  -webkit-touch-callout: none; /* hạn chế callout khi chạm giữ */
-  -webkit-user-drag: none; /* tránh coi là phần tử kéo-thả */
+  pointer-events: none;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
 }
 
 #loader {
