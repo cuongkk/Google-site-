@@ -3,10 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes, maximum-scale=5" />
-    <title>PDF Viewer – Swipe Left/Right (Fixed)</title>
+    <title>PDF Viewer – Swipe Left/Right (Clean)</title>
 
-    <!-- Icons -->
+    <!-- Icons (optional) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
@@ -26,6 +27,12 @@
         color: var(--fg);
         overflow: hidden;
       }
+      /* iOS safe-area */
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
 
       .page-header {
         height: 50px;
@@ -39,15 +46,16 @@
         left: 0;
         right: 0;
         z-index: 10;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        padding-top: env(safe-area-inset-top);
       }
       .page-header .fileName {
         font-size: 15px;
         font-weight: bold;
       }
 
+      /* Vùng cuộn ngang từng trang */
       #page-container {
-        height: calc(100vh - 50px);
+        height: calc(100dvh - 50px - env(safe-area-inset-top));
         display: flex;
         overflow-x: auto;
         overflow-y: hidden;
@@ -55,8 +63,8 @@
         scroll-behavior: smooth;
         align-items: center;
         margin-top: 50px;
-        -ms-overflow-style: none; /* IE/Edge */
-        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
       #page-container::-webkit-scrollbar {
         display: none;
@@ -70,8 +78,9 @@
         background: #fff;
         border-radius: 6px;
         box-shadow: 0 0 0 1px var(--border);
-        max-width: 90vw; /* đảm bảo khớp với getPageCssWidth() */
-        max-height: 90vh;
+        width: calc(100dvw - env(safe-area-inset-left) - env(safe-area-inset-right));
+        max-width: 100%;
+        max-height: calc(100dvh - 70px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
       }
 
       #loader {
@@ -137,26 +146,38 @@
         function clamp(v, min, max) {
           return Math.min(Math.max(v, min), max);
         }
-        function getPageCssWidth() {
-          var vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-          return Math.floor(vw * 0.9); // 90% bề rộng viewport
+        function vw() {
+          return Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+        }
+        function vh() {
+          return Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
         }
 
-        // Render 1 trang vào canvas (theo chiều rộng màn hình)
+        // Fit trang vào cả chiều rộng & chiều cao hiện có
         function renderPage(num, canvas) {
           return pdfDoc.getPage(num).then(function (page) {
             var vp1 = page.getViewport({ scale: 1 });
             var dpr = Math.max(1, window.devicePixelRatio || 1);
-            var cssW = getPageCssWidth();
-            var scale = (cssW / vp1.width) * dpr;
+
+            // khung hiển thị khả dụng (trừ header ~50px + margin)
+            var cssW = vw();
+            var cssH = vh() - 70; // 50 header + một ít đệm
+
+            var scaleW = cssW / vp1.width;
+            var scaleH = cssH / vp1.height;
+            var cssScale = Math.min(scaleW, scaleH);
+            var scale = cssScale * dpr;
             var viewport = page.getViewport({ scale: scale });
 
-            // pixel render
+            // render pixels
             canvas.width = Math.floor(viewport.width);
             canvas.height = Math.floor(viewport.height);
-            // kích thước CSS ổn định ngay từ đầu
-            canvas.style.width = cssW + "px";
-            canvas.style.height = Math.floor(cssW * (vp1.height / vp1.width)) + "px";
+
+            // css hiển thị
+            var finalCssW = Math.floor(vp1.width * cssScale);
+            var finalCssH = Math.floor(vp1.height * cssScale);
+            canvas.style.width = finalCssW + "px";
+            canvas.style.height = finalCssH + "px";
 
             var ctx = canvas.getContext("2d", { alpha: false });
             return page.render({ canvasContext: ctx, viewport: viewport }).promise;
@@ -176,10 +197,10 @@
               totalPages = pdfDoc.numPages;
               container.innerHTML = "";
 
-              // Tạo tất cả canvas, set kích thước CSS trước để không giật
-              var cssW = getPageCssWidth();
-              var placeholderH = Math.floor(cssW * 1.414213562); // gần A4
-              var i;
+              // Tạo canvas placeholder theo viewport để không giật
+              var i,
+                cssW = vw();
+              var placeholderH = Math.floor((vh() - 70) * 0.98);
               for (i = 1; i <= totalPages; i++) {
                 var c = document.createElement("canvas");
                 c.className = "pageCanvas";
@@ -188,30 +209,29 @@
                 container.appendChild(c);
               }
 
-              // Render tuần tự từng trang
+              // Render tuần tự
               var index = 0;
-              function renderNext() {
+              function next() {
                 if (index >= totalPages) {
                   showLoader(false);
-                  // scroll tới trang đầu tiên
                   if (container.children[0]) {
-                    container.children[0].scrollIntoView({ behavior: "instant", inline: "center" });
+                    container.children[0].scrollIntoView({ behavior: "auto", inline: "center" });
                   }
                   return;
                 }
                 var canvas = container.children[index];
                 renderPage(index + 1, canvas)
                   .then(function () {
-                    index += 1;
-                    renderNext();
+                    index = index + 1;
+                    next();
                   })
                   .catch(function (err) {
                     console.error("Render error at page", index + 1, err);
-                    index += 1;
-                    renderNext();
+                    index = index + 1;
+                    next();
                   });
               }
-              renderNext();
+              next();
             })
             .catch(function (err) {
               console.error("Load PDF error:", err);
@@ -220,7 +240,7 @@
             });
         }
 
-        // Vuốt trái/phải để chuyển trang (theo chiều ngang)
+        // Vuốt trái/phải để chuyển trang
         var startX = 0;
         var startTime = 0;
         var touchActive = false;
@@ -230,7 +250,9 @@
         container.addEventListener(
           "touchstart",
           function (e) {
-            if (e.touches.length !== 1) return;
+            if (e.touches.length !== 1) {
+              return;
+            }
             touchActive = true;
             startX = e.touches[0].clientX;
             startTime = Date.now();
@@ -241,15 +263,17 @@
         container.addEventListener(
           "touchend",
           function (e) {
-            if (!touchActive) return;
+            if (!touchActive) {
+              return;
+            }
             touchActive = false;
             var dx = e.changedTouches[0].clientX - startX;
             var dt = Date.now() - startTime;
             if (Math.abs(dx) > SWIPE_DIST && dt < SWIPE_TIME) {
               if (dx < 0 && currentPage < totalPages) {
-                currentPage++;
+                currentPage = currentPage + 1;
               } else if (dx > 0 && currentPage > 1) {
-                currentPage--;
+                currentPage = currentPage - 1;
               }
               var el = container.children[currentPage - 1];
               if (el) {
@@ -260,20 +284,21 @@
           { passive: true }
         );
 
-        // Re-render theo chiều rộng màn hình khi resize/orientation
+        // Re-render theo kích thước mới
         var resizeTimer = null;
         window.addEventListener("resize", function () {
-          if (!pdfDoc) return;
+          if (!pdfDoc) {
+            return;
+          }
           clearTimeout(resizeTimer);
           resizeTimer = setTimeout(function () {
             showLoader(true);
             var canvases = Array.prototype.slice.call(container.children);
-            var i;
-            function rerenderAll(idx) {
+            (function rerenderAll(idx) {
               if (idx >= canvases.length) {
                 var el = container.children[currentPage - 1];
                 if (el) {
-                  el.scrollIntoView({ behavior: "instant", inline: "center" });
+                  el.scrollIntoView({ behavior: "auto", inline: "center" });
                 }
                 showLoader(false);
                 return;
@@ -285,10 +310,14 @@
                 .catch(function () {
                   rerenderAll(idx + 1);
                 });
-            }
-            rerenderAll(0);
+            })(0);
           }, 120);
         });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", function () {
+            window.dispatchEvent(new Event("resize"));
+          });
+        }
         window.addEventListener("orientationchange", function () {
           setTimeout(function () {
             window.dispatchEvent(new Event("resize"));
