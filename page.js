@@ -4,21 +4,17 @@
     const data = JSON.parse(stored);
     console.log("Dữ liệu nhận:", data);
     document.getElementById("fileName").textContent = data.name;
+    document.title = data.name;
 
     const BASE_URL = "https://cuongkk.github.io/Tai-lieu-/";
     const DEFAULT_FILE = data.file + ".pdf";
 
-    // ---- Lấy tên file từ query (?file=abc.pdf) nếu có, không thì dùng mặc định
     function getFileFromQuery() {
       const u = new URL(window.location.href);
       return u.searchParams.get("file");
     }
-    const FILE_NAME = getFileFromQuery() || DEFAULT_FILE; // <— JS quyết định tên file ở đây
+    const FILE_NAME = getFileFromQuery() || DEFAULT_FILE;
     const PDF_URL = new URL(FILE_NAME, BASE_URL).toString();
-
-    // ---- Gán tên file lên HTML (chỉ hiển thị)
-    const fileNameEl = document.getElementById("fileName");
-    if (fileNameEl) fileNameEl.textContent = FILE_NAME;
 
     // ---- PDF.js worker
     if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
@@ -32,10 +28,6 @@
     const nextBtn = document.getElementById("nextBtn");
     const pageInput = document.getElementById("pageInput");
     const pageCountEl = document.getElementById("pageCount");
-    const zoomInBtn = document.getElementById("zoomInBtn");
-    const zoomOutBtn = document.getElementById("zoomOutBtn");
-    const fitWidthBtn = document.getElementById("fitWidthBtn");
-    const fitPageBtn = document.getElementById("fitPageBtn");
     const loader = document.getElementById("loader");
 
     // ---- State
@@ -54,7 +46,6 @@
       return Math.min(Math.max(v, min), max);
     }
     function updateButtons() {
-      // Chỉ disable khi thật sự ở đầu/cuối
       prevBtn.disabled = currentPage <= 1;
       nextBtn.disabled = currentPage >= totalPages;
 
@@ -79,7 +70,7 @@
 
         let viewport = page.getViewport({ scale: 1.0 });
         const containerW = document.getElementById("container").clientWidth - 32;
-        const containerH = window.innerHeight - document.querySelector("header").offsetHeight - 32;
+        const containerH = window.innerHeight - document.querySelector(".page-header").offsetHeight - 32;
 
         if (fitMode === "width") {
           scale = clamp(containerW / viewport.width, 0.25, 4);
@@ -141,16 +132,6 @@
       const num = parseInt(e.target.value, 10) || 1;
       queueRender(num);
     });
-    zoomInBtn.addEventListener("click", () => {
-      scale = clamp(scale + 0.1, 0.25, 4);
-      renderPage(currentPage);
-    });
-    zoomOutBtn.addEventListener("click", () => {
-      scale = clamp(scale - 0.1, 0.25, 4);
-      renderPage(currentPage);
-    });
-    fitWidthBtn.addEventListener("click", () => renderPage(currentPage, "width"));
-    fitPageBtn.addEventListener("click", () => renderPage(currentPage, "page"));
 
     window.addEventListener("keydown", (e) => {
       if (!pdfDoc) return;
@@ -197,7 +178,5 @@
 
     // ---- Khởi chạy
     loadPdf(PDF_URL);
-
-    localStorage.removeItem("selectedFile");
   }
 })();

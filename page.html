@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="assets/css/style.css" />
+    <title></title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  </head>
+  <body class="page">
+    <div class="page-header">
+      <span id="fileName" class="fileName">—</span>
+    </div>
+
+    <div id="container">
+      <div id="loader">Đang tải...</div>
+      <canvas id="pdfCanvas" aria-label="PDF page"></canvas>
+    </div>
+
+    <div class="page-footer">
+      <button id="prevBtn">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      <div class="group">
+        <input id="pageInput" type="number" min="1" value="1" />
+        <span>/ <span id="pageCount">0</span></span>
+      </div>
+      <button id="nextBtn">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+    <script src="page.js"></script>
+  </body>
+</html>

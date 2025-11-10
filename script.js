@@ -10,7 +10,7 @@ if (true) {
       const fileData = { name: fileName, file: fileName };
       localStorage.setItem("selectedFile", JSON.stringify(fileData));
 
-      window.location.href = "page1.html";
+      window.location.href = "page.html";
     });
   });
 }
