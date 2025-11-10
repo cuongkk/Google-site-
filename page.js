@@ -111,6 +111,12 @@
       canvas.style.width = Math.floor(renderWidth / dpr) + "px";
       canvas.style.height = Math.floor(renderHeight / dpr) + "px";
 
+      if (zoomMode === "custom" && customScale > 1) {
+        canvas.style.marginTop = "40px";
+      } else {
+        canvas.style.marginTop = "0";
+      }
+
       // Reset any transforms
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
@@ -178,7 +184,6 @@
   window.addEventListener("keydown", (e) => {
     if (!pdfDoc) return;
 
-    // Đừng chặn phím nếu đang gõ trong input/textarea
     const tag = document.activeElement.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA") return;
 
