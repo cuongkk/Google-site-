@@ -187,7 +187,7 @@ body.page {
   text-align: center;
   gap: 8px;
   background: #111319;
-  position: sticky;
+  position: fixed;
   top: 0;
   z-index: 10;
 }
@@ -235,7 +235,10 @@ canvas#pdfCanvas {
   justify-content: center;
   align-items: center;
   background: #111319;
-  position: sticky;
+  position: fixed;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
   bottom: 0;
   z-index: 10;
 }
@@ -259,13 +262,19 @@ button:disabled {
 }
 
 /* Input số trang */
-input[type="number"] {
+.page-footer input[type="number"] {
   text-align: center;
-  width: 56px; /* rộng hơn để không co giật khi nhập số nhiều chữ số */
+  width: 50px;
   background: #1a1d26;
   color: #e9eaee;
   border: 1px solid #2a2f3a;
   border-radius: 8px;
   padding: 8px 10px;
+  font-size: 14px;
+}
+.page-footer .pageCount {
+  display: inline-block;
+  width: 30px;
+  text-align: center;
   font-size: 14px;
 }

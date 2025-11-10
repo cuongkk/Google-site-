@@ -1,27 +1,58 @@
+/* ===========================
+   page.js — PDF viewer logic
+   =========================== */
+
 (() => {
+  /* ---------- 0) Polyfill chiều cao viewport thực (iOS Safari) ---------- */
+  const setAppHeight = () => {
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty("--vvh", vh + "px");
+  };
+  setAppHeight();
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", setAppHeight);
+  }
+  window.addEventListener("resize", setAppHeight);
+  window.addEventListener("orientationchange", () => setTimeout(setAppHeight, 200));
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) setTimeout(setAppHeight, 60);
+  });
+
+  /* ---------- 1) Lấy thông tin file ---------- */
   const stored = localStorage.getItem("selectedFile");
-  if (!stored) return;
-
-  const data = JSON.parse(stored);
-  document.getElementById("fileName").textContent = data.name;
-  document.title = data.name;
-
-  const BASE_URL = "https://cuongkk.github.io/Tai-lieu-/";
-  const DEFAULT_FILE = data.file + ".pdf";
+  let data = null;
+  if (stored) {
+    try {
+      data = JSON.parse(stored);
+    } catch (_) {}
+  }
 
   function getFileFromQuery() {
     const u = new URL(window.location.href);
-    return u.searchParams.get("file");
+    return u.searchParams.get("file"); // ví dụ ?file=abc.pdf
   }
+
+  const BASE_URL = "https://cuongkk.github.io/Tai-lieu-/";
+  const DEFAULT_FILE = data ? data.file + ".pdf" : null;
+
   const FILE_NAME = getFileFromQuery() || DEFAULT_FILE;
+  if (!FILE_NAME) {
+    console.warn("Không tìm thấy tên file. Hãy đặt localStorage.selectedFile hoặc ?file=xxx.pdf");
+    return;
+  }
   const PDF_URL = new URL(FILE_NAME, BASE_URL).toString();
 
-  // ---- PDF.js worker
+  // Cập nhật tiêu đề
+  const fileNameEl = document.getElementById("fileName");
+  if (fileNameEl) fileNameEl.textContent = data?.name || FILE_NAME;
+  document.title = data?.name || FILE_NAME;
+
+  /* ---------- 2) Cấu hình PDF.js worker ---------- */
   if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
     window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
   }
 
-  // ---- DOM
+  /* ---------- 3) DOM refs ---------- */
   const canvas = document.getElementById("pdfCanvas");
   const ctx = canvas.getContext("2d");
   const prevBtn = document.getElementById("prevBtn");
@@ -31,38 +62,42 @@
   const loader = document.getElementById("loader");
   const containerEl = document.getElementById("page-container");
 
-  // ---- State
+  /* ---------- 4) State ---------- */
   let pdfDoc = null;
   let currentPage = 1;
   let totalPages = 0;
 
   // zoomMode: "fitWidth" | "fitPage" | "custom"
   let zoomMode = "fitWidth";
-  let customScale = 1.0; // chỉ dùng khi zoomMode = "custom"
+  let customScale = 1.0; // dùng khi zoomMode="custom"
 
   let rendering = false;
   let pendingPage = null;
 
-  // ---- Helpers
-  function showLoader(on) {
+  /* ---------- 5) Helpers ---------- */
+  const showLoader = (on) => {
+    if (!loader) return;
     loader.style.display = on ? "inline-block" : "none";
-  }
-  function clamp(v, min, max) {
-    return Math.min(Math.max(v, min), max);
-  }
-  function updateButtons() {
-    prevBtn.disabled = currentPage <= 1;
-    nextBtn.disabled = currentPage >= totalPages;
+  };
 
-    pageInput.max = totalPages || 1;
-    pageInput.value = currentPage;
-    pageCountEl.textContent = totalPages || 0;
-  }
+  const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 
-  function computeScale(viewportAt1) {
-    // scale hiển thị trên CSS (không nhân dpr)
-    const containerW = Math.max(1, containerEl.clientWidth - 16);
-    const containerH = Math.max(1, containerEl.clientHeight - 16);
+  const updateButtons = () => {
+    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+    if (pageInput) {
+      pageInput.max = totalPages || 1;
+      pageInput.value = currentPage;
+    }
+    if (pageCountEl) pageCountEl.textContent = totalPages || 0;
+  };
+
+  const computeScale = (viewportAt1) => {
+    // scale CSS (chưa nhân DPR)
+    const containerStyles = getComputedStyle(containerEl);
+    // lấy kích thước trong (tránh scrollbar)
+    const containerW = Math.max(1, containerEl.clientWidth);
+    const containerH = Math.max(1, containerEl.clientHeight);
 
     if (zoomMode === "fitWidth") {
       return clamp(containerW / viewportAt1.width, 0.25, 4);
@@ -74,8 +109,9 @@
     }
     // custom
     return clamp(customScale, 0.25, 4);
-  }
+  };
 
+  /* ---------- 6) Render ---------- */
   async function renderPage(num) {
     if (!pdfDoc) return;
 
@@ -89,29 +125,25 @@
     try {
       const page = await pdfDoc.getPage(num);
 
-      // Viewport 1.0 để tính toán
+      // viewport 1.0 để tính scale
       let viewport = page.getViewport({ scale: 1.0 });
 
-      // Tính scale CSS theo mode
+      // scale CSS theo mode + DPR cho hình nét
       const cssScale = computeScale(viewport);
-
-      // DPR để render nét
       const dpr = Math.max(1, window.devicePixelRatio || 1);
-
-      // Viewport thật để render
       viewport = page.getViewport({ scale: cssScale * dpr });
 
-      // Cấu hình canvas (pixel)
+      // cấu hình canvas (pixel)
       const renderWidth = Math.floor(viewport.width);
       const renderHeight = Math.floor(viewport.height);
       canvas.width = renderWidth;
       canvas.height = renderHeight;
 
-      // Kích thước hiển thị (CSS px)
+      // kích thước hiển thị (CSS px)
       canvas.style.width = Math.floor(renderWidth / dpr) + "px";
       canvas.style.height = Math.floor(renderHeight / dpr) + "px";
 
-      // Reset any transforms
+      // reset transform
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
       await page.render({ canvasContext: ctx, viewport }).promise;
@@ -135,11 +167,12 @@
     }
   }
 
-  function queueRender(num) {
+  const queueRender = (num) => {
     num = clamp(num, 1, totalPages || 1);
     renderPage(num);
-  }
+  };
 
+  /* ---------- 7) Load PDF ---------- */
   async function loadPdf(url) {
     try {
       showLoader(true);
@@ -148,7 +181,14 @@
       totalPages = pdfDoc.numPages;
       currentPage = 1;
       updateButtons();
+
+      // render lần đầu
       await renderPage(1);
+
+      // đảm bảo lần đầu fit đúng kích thước viewport thực (iOS)
+      requestAnimationFrame(() => {
+        renderPage(currentPage);
+      });
     } catch (err) {
       console.error("Load PDF error:", err);
       alert("Không tải được PDF. Kiểm tra BASE_URL/FILE_NAME hoặc CORS.");
@@ -157,29 +197,30 @@
     }
   }
 
-  // ---- Events
-  prevBtn.addEventListener("click", () => queueRender(currentPage - 1));
-  nextBtn.addEventListener("click", () => queueRender(currentPage + 1));
+  /* ---------- 8) Events ---------- */
+  if (prevBtn) prevBtn.addEventListener("click", () => queueRender(currentPage - 1));
+  if (nextBtn) nextBtn.addEventListener("click", () => queueRender(currentPage + 1));
 
-  // Khi đổi số trang: Enter sẽ blur() để thoát INPUT, tránh kẹt focus
-  pageInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const num = parseInt(pageInput.value, 10) || 1;
-      pageInput.blur();
+  if (pageInput) {
+    // Enter để chuyển trang + blur để thoát input (trả phím mũi tên lại)
+    pageInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const num = parseInt(pageInput.value, 10) || 1;
+        pageInput.blur();
+        queueRender(num);
+      }
+    });
+    pageInput.addEventListener("change", (e) => {
+      const num = parseInt(e.target.value, 10) || 1;
       queueRender(num);
-    }
-  });
-  pageInput.addEventListener("change", (e) => {
-    const num = parseInt(e.target.value, 10) || 1;
-    queueRender(num);
-  });
+    });
+  }
 
+  // Phím tắt (không bắt khi đang gõ trong input/textarea)
   window.addEventListener("keydown", (e) => {
     if (!pdfDoc) return;
-
-    // Đừng chặn phím nếu đang gõ trong input/textarea
-    const tag = document.activeElement.tagName;
+    const tag = document.activeElement?.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA") return;
 
     switch (e.key) {
@@ -194,14 +235,14 @@
         queueRender(currentPage + 1);
         break;
       case "+":
-      case "=":
+      case "=": // zoom in
         e.preventDefault();
         zoomMode = "custom";
         customScale = clamp(customScale + 0.1, 0.25, 4);
         renderPage(currentPage);
         break;
       case "-":
-      case "_":
+      case "_": // zoom out
         e.preventDefault();
         zoomMode = "custom";
         customScale = clamp(customScale - 0.1, 0.25, 4);
@@ -222,21 +263,25 @@
     }
   });
 
-  // Chỉ DÙNG MỘT cơ chế re-render khi đổi kích thước
+  // Debounce resize nhẹ để không phải chạm/nhấn đúp mới fit
   let resizeTimer = null;
-  let lastWidth = containerEl.clientWidth;
   window.addEventListener("resize", () => {
-    const w = containerEl.clientWidth;
-    if (Math.abs(w - lastWidth) < 8) return;
-    lastWidth = w;
+    if (!pdfDoc) return;
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      if (pdfDoc) renderPage(currentPage);
-    }, 150);
+      renderPage(currentPage);
+    }, 120);
   });
+
   window.addEventListener("orientationchange", () => {
-    lastWidth = 0;
-    if (pdfDoc) renderPage(currentPage);
+    if (!pdfDoc) return;
+    setTimeout(() => renderPage(currentPage), 200);
+  });
+
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted && pdfDoc) {
+      setTimeout(() => renderPage(currentPage), 60);
+    }
   });
 
   loadPdf(PDF_URL);
