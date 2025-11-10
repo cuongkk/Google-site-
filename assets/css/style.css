@@ -195,7 +195,7 @@ body.page {
 #page-container {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   height: calc(100% - 80px);
   overflow: auto;
 }
