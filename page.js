@@ -67,7 +67,7 @@
       try {
         const page = await pdfDoc.getPage(num);
 
-        const containerEl = document.getElementById("container");
+        const containerEl = document.getElementById("page-container");
         const headerEl = document.querySelector("header"); // dùng nếu bạn muốn fit theo chiều cao ở nơi khác
         let viewport = page.getViewport({ scale: 1.0 });
 
@@ -181,13 +181,13 @@
       if (pdfDoc) renderPage(currentPage);
     });
 
-    let lastWidth = document.getElementById("container").clientWidth;
+    let lastWidth = document.getElementById("page-container").clientWidth;
     let resizeTimer = null;
 
     function scheduleRerender() {
       if (!pdfDoc) return;
 
-      const w = document.getElementById("container").clientWidth;
+      const w = document.getElementById("page-container").clientWidth;
       if (Math.abs(w - lastWidth) < 8) return;
       lastWidth = w;
 
