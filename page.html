@@ -2,35 +2,539 @@
 <html lang="vi">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes, maximum-scale=5" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" />
-    <link rel="stylesheet" href="assets/css/style.css" />
-    <title></title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes, maximum-scale=5"
+    />
+    <title>PDF Viewer (mượt)</title>
+
+    <!-- Font Awesome (icons) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <!-- PDF.js -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+
+    <style>
+      :root {
+        --bg: #0b0c0e;
+        --panel: #111319;
+        --panel-2: #1a1d26;
+        --border: #2a2f3a;
+        --fg: #e9eaee;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body.page {
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        touch-action: pan-y;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      /* Header */
+      .page-header {
+        height: 50px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        gap: 8px;
+        background: var(--panel);
+        position: fixed;
+        top: 0;
+        inset-inline: 0;
+        z-index: 10;
+      }
+      .page-header .fileName {
+        font-size: 15px;
+        font-weight: bold;
+        opacity: 0.9;
+      }
+
+      /* Main container */
+      #page-container {
+        height: calc(100vh - 80px);
+        display: grid;
+        place-items: end center;
+        padding: 8px 0;
+        overflow: auto;
+        contain: content; /* cô lập layout/paint để tránh giật */
+        will-change: contents;
+      }
+
+      canvas#pdfCanvas {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        background: #fff;
+      }
+
+      /* Loader giữ chỗ cố định để tránh nhảy layout */
+      #loader {
+        position: sticky;
+        top: 12px;
+        justify-self: center;
+        padding: 8px 12px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        pointer-events: none;
+        z-index: 5;
+        min-height: 18px; /* giữ kích thước */
+        visibility: hidden; /* thay vì display: none để không đẩy layout */
+      }
+      #loader[aria-hidden="false"] {
+        visibility: visible;
+      }
+
+      /* Footer */
+      .page-footer {
+        height: 40px;
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        align-items: center;
+        background: var(--panel);
+        position: fixed;
+        inset-inline: 0;
+        bottom: 0;
+        z-index: 10;
+      }
+      .page-footer .group {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .page-footer button {
+        background: var(--panel-2);
+        color: var(--fg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .page-footer button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Input số trang */
+      .page-footer input[type="number"] {
+        text-align: center;
+        width: 56px;
+        background: var(--panel-2);
+        color: var(--fg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 14px;
+      }
+      .page-footer .pageCount {
+        display: inline-block;
+        width: 32px;
+        text-align: center;
+        font-size: 14px;
+      }
+    </style>
   </head>
   <body class="page">
     <div class="page-header">
       <span id="fileName" class="fileName">—</span>
     </div>
+
     <div style="height: 40px"></div>
+
     <div id="page-container">
-      <div id="loader"></div>
-      <canvas id="pdfCanvas" aria-label="PDF page"></canvas>
+      <!-- aria-live để screen reader đọc nhẹ nhàng, không gây thay đổi bố cục -->
+      <div id="loader" role="status" aria-live="polite" aria-hidden="true">Đang tải…</div>
+      <canvas id="pdfCanvas" aria-label="PDF page" /></canvas>
     </div>
+
     <div style="height: 40px"></div>
 
     <div class="page-footer">
-      <button id="prevBtn">
-        <i class="fa-solid fa-chevron-left"></i>
+      <button id="prevBtn" title="Trang trước (← / PageUp)">
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
       </button>
       <div class="group">
-        <input id="pageInput" type="number" min="1" value="1" />
+        <input id="pageInput" type="number" min="1" value="1" inputmode="numeric" />
         <span>/ <span class="pageCount" id="pageCount">0</span></span>
       </div>
-      <button id="nextBtn">
-        <i class="fa-solid fa-chevron-right"></i>
+      <button id="nextBtn" title="Trang sau (→ / PageDown)">
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
       </button>
     </div>
-    <script src="page.js"></script>
+
+    <script>
+      (() => {
+        // ====== Đọc thông tin file ======
+        const stored = localStorage.getItem("selectedFile");
+        const data = stored ? JSON.parse(stored) : null;
+        const BASE_URL = "https://cuongkk.github.io/Tai-lieu-/";
+        const DEFAULT_FILE = data ? data.file + ".pdf" : "";
+        if (data) {
+          document.getElementById("fileName").textContent = data.name || "—";
+          document.title = data.name || document.title;
+        }
+
+        function getFileFromQuery() {
+          const u = new URL(window.location.href);
+          return u.searchParams.get("file");
+        }
+        const FILE_NAME = getFileFromQuery() || DEFAULT_FILE;
+        const PDF_URL = FILE_NAME ? new URL(FILE_NAME, BASE_URL).toString() : null;
+
+        // ====== PDF.js worker ======
+        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        }
+
+        // ====== DOM ======
+        const canvas = document.getElementById("pdfCanvas");
+        const ctx = canvas.getContext("2d");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        const pageInput = document.getElementById("pageInput");
+        const pageCountEl = document.getElementById("pageCount");
+        const loader = document.getElementById("loader");
+        const containerEl = document.getElementById("page-container");
+
+        // ====== State ======
+        let pdfDoc = null;
+        let currentPage = 1;
+        let totalPages = 0;
+        let rendering = false;
+        let pendingPage = null;
+        let renderTask = null; // để cancel render cũ
+
+        // zoomMode: "fitWidth" | "fitPage" | "custom"
+        let zoomMode = "fitWidth";
+        let customScale = 1.0; // dùng khi zoomMode = "custom"
+
+        // Cache ImageBitmap (LRU đơn giản)
+        const bitmapCache = new Map();
+        const CACHE_LIMIT = 3;
+
+        // ====== Helpers ======
+        function setLoader(on) {
+          loader.setAttribute("aria-hidden", on ? "false" : "true");
+        }
+        function clamp(v, min, max) {
+          return Math.min(Math.max(v, min), max);
+        }
+        function updateButtons() {
+          prevBtn.disabled = currentPage <= 1;
+          nextBtn.disabled = currentPage >= totalPages;
+          pageInput.max = totalPages || 1;
+          pageInput.value = currentPage;
+          pageCountEl.textContent = totalPages || 0;
+        }
+        function computeScale(viewportAt1) {
+          // scale hiển thị trên CSS (không nhân dpr)
+          const containerW = Math.max(1, containerEl.clientWidth - 16);
+          const containerH = Math.max(1, containerEl.clientHeight - 16);
+          if (zoomMode === "fitWidth") {
+            return clamp(containerW / viewportAt1.width, 0.25, 4);
+          }
+          if (zoomMode === "fitPage") {
+            const sW = containerW / viewportAt1.width;
+            const sH = containerH / viewportAt1.height;
+            return clamp(Math.min(sW, sH), 0.25, 4);
+          }
+          return clamp(customScale, 0.25, 4);
+        }
+        function cachePut(pageNum, bitmap) {
+          if (bitmapCache.has(pageNum)) {
+            const old = bitmapCache.get(pageNum);
+            if (old && old.close) old.close();
+          }
+          bitmapCache.set(pageNum, bitmap);
+          // LRU: nếu quá giới hạn, bỏ item đầu tiên
+          if (bitmapCache.size > CACHE_LIMIT) {
+            const firstKey = bitmapCache.keys().next().value;
+            const victim = bitmapCache.get(firstKey);
+            if (victim && victim.close) victim.close();
+            bitmapCache.delete(firstKey);
+          }
+        }
+        function cacheGet(pageNum) {
+          const bmp = bitmapCache.get(pageNum);
+          if (!bmp) return null;
+          // làm mới LRU: xóa & thêm lại
+          bitmapCache.delete(pageNum);
+          bitmapCache.set(pageNum, bmp);
+          return bmp;
+        }
+        function paintBitmapToCanvas(bitmap, dpr) {
+          const w = Math.floor(bitmap.width);
+          const h = Math.floor(bitmap.height);
+          if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+            canvas.style.width = Math.floor(w / dpr) + "px";
+            canvas.style.height = Math.floor(h / dpr) + "px";
+          }
+          requestAnimationFrame(() => {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+            ctx.drawImage(bitmap, 0, 0);
+          });
+        }
+
+        async function renderPage(num) {
+          if (!pdfDoc || !num) return;
+
+          // nếu đang render trước đó: hủy
+          if (renderTask && renderTask.cancel) {
+            try {
+              renderTask.cancel();
+            } catch (_) {}
+          }
+
+          rendering = true;
+          setLoader(true);
+
+          try {
+            // vẽ ngay nếu đã có bitmap cache
+            const cached = cacheGet(num);
+            const dprQuick = Math.max(1, window.devicePixelRatio || 1);
+            if (cached) {
+              paintBitmapToCanvas(cached, dprQuick);
+              currentPage = num;
+              updateButtons();
+              prefetchAround(num);
+              rendering = false;
+              setLoader(false);
+              return;
+            }
+
+            const page = await pdfDoc.getPage(num);
+            let viewport1 = page.getViewport({ scale: 1.0 });
+            const cssScale = computeScale(viewport1);
+            const dpr = Math.max(1, window.devicePixelRatio || 1);
+            const renderViewport = page.getViewport({ scale: cssScale * dpr });
+
+            // offscreen canvas để render mượt
+            const osc = document.createElement("canvas");
+            osc.width = Math.floor(renderViewport.width);
+            osc.height = Math.floor(renderViewport.height);
+            const octx = osc.getContext("2d", { alpha: false });
+
+            renderTask = page.render({ canvasContext: octx, viewport: renderViewport });
+            await renderTask.promise;
+
+            const bitmap = await createImageBitmap(osc);
+            cachePut(num, bitmap);
+            paintBitmapToCanvas(bitmap, dpr);
+
+            currentPage = num;
+            updateButtons();
+            prefetchAround(num);
+          } catch (err) {
+            if (err?.name !== "RenderingCancelledException") {
+              console.error("Render error:", err);
+              alert("Không thể hiển thị trang. Kiểm tra URL PDF hoặc CORS.");
+            }
+          } finally {
+            rendering = false;
+            setLoader(false);
+            renderTask = null;
+
+            if (pendingPage != null && pendingPage !== currentPage) {
+              const next = pendingPage;
+              pendingPage = null;
+              renderPage(next);
+            } else {
+              pendingPage = null;
+            }
+          }
+        }
+
+        function queueRender(num) {
+          if (!totalPages) return;
+          num = clamp(num, 1, totalPages);
+          if (rendering) {
+            pendingPage = num; // sẽ render sau khi xong
+          } else {
+            renderPage(num);
+          }
+        }
+
+        async function prefetchAround(centerPage) {
+          if (!pdfDoc) return;
+          const candidates = [centerPage + 1, centerPage - 1].filter(
+            (p) => p >= 1 && p <= totalPages
+          );
+          for (const p of candidates) {
+            if (cacheGet(p)) continue;
+            try {
+              const page = await pdfDoc.getPage(p);
+              const vp1 = page.getViewport({ scale: 1.0 });
+              const cssScale = computeScale(vp1);
+              const dpr = Math.max(1, window.devicePixelRatio || 1);
+              const vp = page.getViewport({ scale: cssScale * dpr });
+
+              const osc = document.createElement("canvas");
+              osc.width = Math.floor(vp.width);
+              osc.height = Math.floor(vp.height);
+              const octx = osc.getContext("2d", { alpha: false });
+
+              const task = page.render({ canvasContext: octx, viewport: vp });
+              await task.promise;
+
+              const bmp = await createImageBitmap(osc);
+              cachePut(p, bmp);
+            } catch (_) {
+              // bỏ qua lỗi prefetch
+            }
+          }
+        }
+
+        async function loadPdf(url) {
+          if (!url) {
+            alert(
+              "Không có URL PDF. Hãy set localStorage 'selectedFile' hoặc thêm ?file=... vào URL."
+            );
+            return;
+          }
+          try {
+            setLoader(true);
+            const loading = window.pdfjsLib.getDocument({ url });
+            pdfDoc = await loading.promise;
+            totalPages = pdfDoc.numPages;
+            currentPage = 1;
+            updateButtons();
+            await renderPage(1);
+            prefetchAround(1);
+          } catch (err) {
+            console.error("Load PDF error:", err);
+            alert("Không tải được PDF. Kiểm tra BASE_URL/FILE_NAME hoặc CORS.");
+          } finally {
+            setLoader(false);
+          }
+        }
+
+        // ====== Events ======
+        prevBtn.addEventListener("click", () => queueRender(currentPage - 1));
+        nextBtn.addEventListener("click", () => queueRender(currentPage + 1));
+
+        // Nhập số trang: Enter để nhảy, change để nhảy khi blur
+        pageInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const num = parseInt(pageInput.value, 10) || 1;
+            pageInput.blur();
+            queueRender(num);
+          }
+        });
+        pageInput.addEventListener("change", (e) => {
+          const num = parseInt(e.target.value, 10) || 1;
+          queueRender(num);
+        });
+
+        // Phím tắt điều hướng & zoom
+        window.addEventListener("keydown", (e) => {
+          if (!pdfDoc) return;
+          const tag = document.activeElement.tagName;
+          if (tag === "INPUT" || tag === "TEXTAREA") return;
+          switch (e.key) {
+            case "ArrowLeft":
+            case "PageUp":
+              e.preventDefault();
+              queueRender(currentPage - 1);
+              break;
+            case "ArrowRight":
+            case "PageDown":
+              e.preventDefault();
+              queueRender(currentPage + 1);
+              break;
+            case "+":
+            case "=":
+              e.preventDefault();
+              zoomMode = "custom";
+              customScale = clamp(customScale + 0.1, 0.25, 4);
+              // xóa cache trang hiện tại để render lại với scale mới
+              const curBmp1 = bitmapCache.get(currentPage);
+              if (curBmp1 && curBmp1.close) curBmp1.close();
+              bitmapCache.delete(currentPage);
+              renderPage(currentPage);
+              break;
+            case "-":
+            case "_":
+              e.preventDefault();
+              zoomMode = "custom";
+              customScale = clamp(customScale - 0.1, 0.25, 4);
+              const curBmp2 = bitmapCache.get(currentPage);
+              if (curBmp2 && curBmp2.close) curBmp2.close();
+              bitmapCache.delete(currentPage);
+              renderPage(currentPage);
+              break;
+            case "1": // fit width
+              e.preventDefault();
+              zoomMode = "fitWidth";
+              const curBmp3 = bitmapCache.get(currentPage);
+              if (curBmp3 && curBmp3.close) curBmp3.close();
+              bitmapCache.delete(currentPage);
+              renderPage(currentPage);
+              break;
+            case "2": // fit page
+              e.preventDefault();
+              zoomMode = "fitPage";
+              const curBmp4 = bitmapCache.get(currentPage);
+              if (curBmp4 && curBmp4.close) curBmp4.close();
+              bitmapCache.delete(currentPage);
+              renderPage(currentPage);
+              break;
+            default:
+              break;
+          }
+        });
+
+        // Resize: render lại trang hiện tại theo kích thước mới (không xóa cache xung quanh)
+        let resizeTimer = null;
+        window.addEventListener("resize", () => {
+          if (!pdfDoc) return;
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => {
+            const curBmp = bitmapCache.get(currentPage);
+            if (curBmp && curBmp.close) curBmp.close();
+            bitmapCache.delete(currentPage);
+            renderPage(currentPage);
+          }, 120);
+        });
+
+        window.addEventListener("orientationchange", () => {
+          if (!pdfDoc) return;
+          setTimeout(() => {
+            const curBmp = bitmapCache.get(currentPage);
+            if (curBmp && curBmp.close) curBmp.close();
+            bitmapCache.delete(currentPage);
+            renderPage(currentPage);
+          }, 200);
+        });
+
+        // ====== Start ======
+        loadPdf(PDF_URL);
+      })();
+    </script>
   </body>
 </html>

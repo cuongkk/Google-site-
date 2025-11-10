@@ -165,7 +165,7 @@ body {
   color: gray;
 }
 
-body.page {
+/* body.page {
   height: 100vh;
   margin: 0;
   overflow: hidden;
@@ -176,9 +176,8 @@ body.page {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-}
+} 
 
-/* Header */
 .page-header {
   height: 50px;
   display: flex;
@@ -227,7 +226,6 @@ canvas#pdfCanvas {
   z-index: 5;
 }
 
-/* Footer */
 .page-footer {
   height: 40px;
   display: flex;
@@ -261,7 +259,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Input số trang */
 .page-footer input[type="number"] {
   text-align: center;
   width: 50px;
@@ -277,4 +274,4 @@ button:disabled {
   width: 30px;
   text-align: center;
   font-size: 14px;
-}
+} */
