@@ -5,9 +5,23 @@
 }
 
 body {
-  background-color: #f9f8fe;
+  position: relative;
+  height: 100vh;
 }
 
+.inner-background {
+  position: absolute;
+  width: 100%;
+  top: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.inner-background img {
+  width: 100%;
+  height: 100vh;
+  object-fit: cover;
+}
 /* Container */
 
 .container {
@@ -44,15 +58,17 @@ body {
 
 /* Header */
 .header {
+  position: fixed;
+  top: 0;
   width: 100%;
-  margin-bottom: 30px;
-  background-color: #4858ef;
 }
 
 .header .container {
   width: 100%;
 }
+
 .header .inner-wrap {
+  background-color: #4858ef;
   padding: 0 20px;
   height: 60px;
   display: flex;
@@ -75,14 +91,18 @@ body {
 }
 /* End Header */
 
+/* Box */
+.inner-box {
+  height: 60px;
+}
+/* End Box */
+
 /*Section-1*/
 .section-1 {
   width: 100%;
-  margin-bottom: 30px;
 }
 
 .section-1 .inner-wrap {
-  background-color: white;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -109,6 +129,17 @@ body {
   transition: all 0.3s ease;
 }
 
+.section-1 .inner-wrap .inner-list .inner-group img {
+  width: 80px;
+  height: auto;
+}
+
+.section-1 .inner-wrap .inner-list .inner-group label {
+  font-size: 16px;
+  font-weight: 800;
+  color: #333;
+  text-align: center;
+}
 @media (max-width: 991.98px) {
   .section-1 .inner-wrap .inner-list {
     grid-template-columns: repeat(2, 1fr);
@@ -117,6 +148,8 @@ body {
 /* End Section-1 */
 
 .footer {
+  position: fixed;
+  bottom: 0;
   background-color: white;
   border-radius: 10px;
   width: 100%;
