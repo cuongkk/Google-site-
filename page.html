@@ -73,6 +73,7 @@
       }
 
       .pageCanvas {
+        object-fit: contain;
         flex: 0 0 100%;
         scroll-snap-align: center;
         display: block;
@@ -116,8 +117,10 @@
   </head>
   <body>
     <div class="page-header"><span id="fileName" class="fileName">—</span></div>
-    <div id="loader">Đang tải…</div>
-    <div id="page-container"></div>
+    <div class="page-section">
+      <div id="loader">Đang tải…</div>
+      <div id="page-container"></div>
+    </div>
     <div id="page-footer">
       <span id="pageIndicator">Trang 0 / 0</span>
     </div>
@@ -131,7 +134,7 @@
         var DEFAULT_FILE = data ? data.file + ".pdf" : "";
         if (data) {
           var nameEl = document.getElementById("fileName");
-          nameEl.textContent = data.name || "—";
+          if (nameEl) nameEl.textContent = data.name || "—";
           document.title = data.name || document.title;
         }
         function getFileFromQuery() {
@@ -154,64 +157,110 @@
         var container = document.getElementById("page-container");
         var loader = document.getElementById("loader");
 
-        // ====== State ======
+        // ====== State / Config ======
         var pdfDoc = null;
         var totalPages = 0;
         var currentPage = 1;
+        var FIT_ON_RESIZE = false; // có muốn re-render khi resize không
 
         // ====== Helpers ======
         function showLoader(on) {
-          loader.style.display = on ? "block" : "none";
+          if (loader) loader.style.display = on ? "block" : "none";
         }
-        function clamp(v, min, max) {
-          return Math.min(Math.max(v, min), max);
-        }
-        function vw() {
-          return Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-        }
+
+        // tính chiều cao khả dụng (viewport)
         function vh() {
           return Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
         }
 
-        //Footer
-        var pageIndicator = document.getElementById("pageIndicator");
+        // tính chiều rộng khả dụng (viewport)
+        function ww() {
+          return Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+        }
 
+        // tính khung hiển thị
+        function computeCssH() {
+          return vh() - 70; // trừ header và đệm
+        }
+
+        // ====== Footer indicator ======
+        var pageIndicator = document.getElementById("pageIndicator");
         function updatePageIndicator() {
           if (!pageIndicator) return;
           pageIndicator.textContent = currentPage + " / " + totalPages;
         }
 
-        // Fit trang vào cả chiều rộng & chiều cao hiện có
+        // ====== Render một trang (fit chiều cao, không dãn ngang) ======
         function renderPage(num, canvas) {
           return pdfDoc.getPage(num).then(function (page) {
             var vp1 = page.getViewport({ scale: 1 });
             var dpr = Math.max(1, window.devicePixelRatio || 1);
 
-            // khung hiển thị khả dụng (trừ header ~50px + margin)
-            var cssW = vw();
-            var cssH = vh() - 70; // 50 header + một ít đệm
+            var cssH = computeCssH();
+            var cssScale = cssH / vp1.height;
+            var pixelScale = cssScale * dpr;
 
-            var scaleW = cssW / vp1.width;
-            var scaleH = cssH / vp1.height;
-            var cssScale = Math.min(scaleW, scaleH);
-            var scale = cssScale * dpr;
-            var viewport = page.getViewport({ scale: scale });
+            var viewport = page.getViewport({ scale: pixelScale });
 
-            // render pixels
+            // canvas thực (pixel)
             canvas.width = Math.floor(viewport.width);
             canvas.height = Math.floor(viewport.height);
 
-            // css hiển thị
+            // canvas hiển thị (CSS)
+            var finalCssH = Math.floor(cssH);
             var finalCssW = Math.floor(vp1.width * cssScale);
-            var finalCssH = Math.floor(vp1.height * cssScale);
-            canvas.style.width = finalCssW + "px";
             canvas.style.height = finalCssH + "px";
+            canvas.style.width = finalCssW + "px";
+            canvas.style.flex = "0 0 auto";
+            canvas.style.display = "block";
 
             var ctx = canvas.getContext("2d", { alpha: false });
             return page.render({ canvasContext: ctx, viewport: viewport }).promise;
           });
         }
 
+        // ====== Cập nhật layout container và pageShell ======
+        function layoutShells() {
+          var cssH = computeCssH();
+          var cssW = ww();
+          container.style.width = cssW + "px";
+          container.style.height = cssH + "px";
+        }
+
+        // ====== Tạo pageShell chứa canvas (full màn hình) ======
+        function createPageShell(placeholderHeightPx) {
+          var shell = document.createElement("div");
+          shell.className = "pageShell";
+
+          var screenW = ww();
+          var screenH = computeCssH();
+
+          // shell full màn hình
+          shell.style.backgroundColor = "#1D9EEF";
+          shell.style.minWidth = screenW + "px";
+          shell.style.height = screenH + "px";
+          shell.style.display = "flex";
+          shell.style.alignItems = "center";
+          shell.style.justifyContent = "center";
+          shell.style.boxSizing = "border-box";
+
+          // có thể chỉnh nền/khung ở đây
+          // shell.style.background = "#f8f8f8";
+          // shell.style.borderRadius = "12px";
+          // shell.style.padding = "8px";
+
+          var canvas = document.createElement("canvas");
+          canvas.className = "pageCanvas";
+          canvas.style.height = placeholderHeightPx + "px";
+          canvas.style.width = "auto";
+          canvas.style.flex = "0 0 auto";
+          canvas.style.display = "block";
+
+          shell.appendChild(canvas);
+          return shell;
+        }
+
+        // ====== Load PDF & render tuần tự ======
         function loadPdf(url) {
           if (!url) {
             alert('Không có URL PDF. Hãy set localStorage "selectedFile" hoặc thêm ?file=... vào URL.');
@@ -226,41 +275,37 @@
               container.innerHTML = "";
               updatePageIndicator();
 
-              // Tạo canvas placeholder theo viewport để không giật
-              var i,
-                cssW = vw();
-              var placeholderH = Math.floor((vh() - 70) * 0.98);
-              for (i = 1; i <= totalPages; i++) {
-                var c = document.createElement("canvas");
-                c.className = "pageCanvas";
-                c.style.width = cssW + "px";
-                c.style.height = placeholderH + "px";
-                container.appendChild(c);
+              var cssH = computeCssH();
+              var placeholderH = Math.floor(cssH * 0.98);
+
+              // tạo pageShell cho từng trang
+              for (var i = 1; i <= totalPages; i++) {
+                var shell = createPageShell(placeholderH);
+                container.appendChild(shell);
               }
 
-              // Render tuần tự
+              // render tuần tự
               var index = 0;
-              function next() {
+              (function next() {
                 if (index >= totalPages) {
                   showLoader(false);
-                  if (container.children[0]) {
-                    container.children[0].scrollIntoView({ behavior: "auto", inline: "center" });
-                  }
+                  var first = container.children[0];
+                  if (first) first.scrollIntoView({ behavior: "auto", inline: "center" });
                   return;
                 }
-                var canvas = container.children[index];
+                var shell = container.children[index];
+                var canvas = shell.querySelector(".pageCanvas");
                 renderPage(index + 1, canvas)
                   .then(function () {
-                    index = index + 1;
+                    index++;
                     next();
                   })
                   .catch(function (err) {
                     console.error("Render error at page", index + 1, err);
-                    index = index + 1;
+                    index++;
                     next();
                   });
-              }
-              next();
+              })();
             })
             .catch(function (err) {
               console.error("Load PDF error:", err);
@@ -269,19 +314,17 @@
             });
         }
 
-        // Vuốt trái/phải để chuyển trang
-        var startX = 0;
-        var startTime = 0;
-        var touchActive = false;
-        var SWIPE_DIST = 60; // px
-        var SWIPE_TIME = 600; // ms
+        // ====== Vuốt trái/phải để chuyển trang ======
+        var startX = 0,
+          startTime = 0,
+          touchActive = false;
+        var SWIPE_DIST = 60;
+        var SWIPE_TIME = 600;
 
         container.addEventListener(
           "touchstart",
           function (e) {
-            if (e.touches.length !== 1) {
-              return;
-            }
+            if (e.touches.length !== 1) return;
             touchActive = true;
             startX = e.touches[0].clientX;
             startTime = Date.now();
@@ -292,21 +335,16 @@
         container.addEventListener(
           "touchend",
           function (e) {
-            if (!touchActive) {
-              return;
-            }
+            if (!touchActive) return;
             touchActive = false;
             var dx = e.changedTouches[0].clientX - startX;
             var dt = Date.now() - startTime;
             if (Math.abs(dx) > SWIPE_DIST && dt < SWIPE_TIME) {
-              if (dx < 0 && currentPage < totalPages) {
-                currentPage = currentPage + 1;
-              } else if (dx > 0 && currentPage > 1) {
-                currentPage = currentPage - 1;
-              }
-              var el = container.children[currentPage - 1];
-              if (el) {
-                el.scrollIntoView({ behavior: "smooth", inline: "center" });
+              if (dx < 0 && currentPage < totalPages) currentPage++;
+              else if (dx > 0 && currentPage > 1) currentPage--;
+              var shell = container.children[currentPage - 1];
+              if (shell) {
+                shell.scrollIntoView({ behavior: "smooth", inline: "center" });
                 updatePageIndicator();
               }
             }
@@ -314,36 +352,41 @@
           { passive: true }
         );
 
-        // Re-render theo kích thước mới
+        // ====== Resize ======
         var resizeTimer = null;
         window.addEventListener("resize", function () {
-          if (!pdfDoc) {
-            return;
-          }
+          if (!pdfDoc) return;
           clearTimeout(resizeTimer);
           resizeTimer = setTimeout(function () {
-            showLoader(true);
-            var canvases = Array.prototype.slice.call(container.children);
-            (function rerenderAll(idx) {
-              if (idx >= canvases.length) {
-                var el = container.children[currentPage - 1];
-                if (el) {
-                  el.scrollIntoView({ behavior: "auto", inline: "center" });
+            layoutShells(); // cập nhật kích thước shell + container
+            if (FIT_ON_RESIZE) {
+              showLoader(true);
+              var shells = Array.prototype.slice.call(container.children);
+              (function rerenderAll(idx) {
+                if (idx >= shells.length) {
+                  var shell = container.children[currentPage - 1];
+                  if (shell) shell.scrollIntoView({ behavior: "auto", inline: "center" });
                   updatePageIndicator();
+                  showLoader(false);
+                  return;
                 }
-                showLoader(false);
-                return;
-              }
-              renderPage(idx + 1, canvases[idx])
-                .then(function () {
-                  rerenderAll(idx + 1);
-                })
-                .catch(function () {
-                  rerenderAll(idx + 1);
-                });
-            })(0);
+                var canvas = shells[idx].querySelector(".pageCanvas");
+                renderPage(idx + 1, canvas)
+                  .then(function () {
+                    rerenderAll(idx + 1);
+                  })
+                  .catch(function () {
+                    rerenderAll(idx + 1);
+                  });
+              })(0);
+            } else {
+              var shell = container.children[currentPage - 1];
+              if (shell) shell.scrollIntoView({ behavior: "auto", inline: "center" });
+              updatePageIndicator();
+            }
           }, 120);
         });
+
         if (window.visualViewport) {
           window.visualViewport.addEventListener("resize", function () {
             window.dispatchEvent(new Event("resize"));
@@ -355,10 +398,8 @@
           }, 200);
         });
 
-        // Start
-        if (PDF_URL) {
-          loadPdf(PDF_URL);
-        }
+        // ====== Start ======
+        if (PDF_URL) loadPdf(PDF_URL);
       })();
     </script>
   </body>

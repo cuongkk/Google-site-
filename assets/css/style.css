@@ -146,7 +146,7 @@ body {
   }
 }
 
-@media (max-width: 400.98px) {
+@media (max-width: 575.98px) {
   .section-1 .inner-wrap .inner-list {
     grid-template-columns: repeat(1, 1fr);
   }
