@@ -14,6 +14,49 @@ if (innerLink) {
     window.location.href = "https://khunghinh.net/p/daihoigialai";
   });
 }
+
+function fitToTwoLines(el, maxFont = 24, minFont = 10) {
+  if (!el) return;
+
+  let size = maxFont;
+  el.style.fontSize = size + "px";
+
+  const maxLines = 2;
+
+  while (size > minFont) {
+    const styles = window.getComputedStyle(el);
+
+    // Lấy line-height, nếu là 'normal' thì tự ước lượng
+    let lineHeight = parseFloat(styles.lineHeight);
+    if (isNaN(lineHeight)) {
+      const fontSize = parseFloat(styles.fontSize);
+      lineHeight = fontSize * 1.2; // ước lượng nhẹ
+    }
+
+    const totalHeight = el.scrollHeight;
+    const lines = Math.round(totalHeight / lineHeight);
+
+    // Nếu đã ≤ 2 dòng thì ok, thoát vòng lặp
+    if (lines <= maxLines) {
+      break;
+    }
+
+    // Ngược lại, giảm font rồi thử lại
+    size -= 1;
+    el.style.fontSize = size + "px";
+  }
+}
+
+function initHeaderTitle() {
+  const title = document.querySelector(".header .header-title");
+  console.log(title);
+  if (!title) return;
+  fitToTwoLines(title, 20, 0); // max = 24px, min = 12px
+}
+
+window.addEventListener("load", initHeaderTitle);
+window.addEventListener("resize", initHeaderTitle);
+
 // const listButton = document.querySelector(".inner-list");
 
 // if (listButton) {

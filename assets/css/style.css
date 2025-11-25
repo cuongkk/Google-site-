@@ -70,6 +70,7 @@ body {
   position: fixed;
   top: 0;
   width: 100%;
+  height: auto;
 }
 
 .header .container {
@@ -78,22 +79,28 @@ body {
 
 .header .inner-wrap {
   background-color: #4858ef;
-  padding: 0 10px;
-  height: 50px;
+  padding: 10px;
+  height: auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
   border-radius: 0 0 10px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.header .inner-wrap .header-logo img {
+  height: 48px;
+  width: auto;
+}
 .header .inner-wrap .header-title {
   color: #fff;
-  font-size: 11px;
   font-weight: 600;
   font-family: var(--font-1);
   text-align: center;
+  line-height: 1.2;
+  white-space: pre-line;
+  flex: 1;
+  overflow: hidden;
 }
 
 @media (max-width: 575.98px) {
