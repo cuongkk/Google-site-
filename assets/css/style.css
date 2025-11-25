@@ -1,3 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@100..900&display=swap");
+
+:root {
+  --font-1: "Lexend Deca", sans-serif;
+  --background-color: #f8f8f8;
+  --main-color: #4502c7;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -70,7 +78,7 @@ body {
 
 .header .inner-wrap {
   background-color: #4858ef;
-  padding: 0 20px;
+  padding: 0 10px;
   height: 50px;
   display: flex;
   align-items: center;
@@ -80,9 +88,12 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.header .inner-wrap img {
-  width: 40px;
-  height: auto;
+.header .inner-wrap .header-title {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-1);
+  text-align: center;
 }
 
 @media (max-width: 575.98px) {
@@ -104,7 +115,7 @@ body {
 }
 
 .section-1 .inner-wrap {
-  padding: 20px;
+  padding: 10px;
   border-radius: 10px;
 }
 
@@ -112,34 +123,47 @@ body {
   width: 100%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 30px;
+  gap: 20px;
 }
 
 .section-1 .inner-wrap .inner-list .inner-group {
   background-color: #f9f8fe;
   border-radius: 10px;
   width: 100%;
-  padding: 40px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.section-1 .inner-wrap .inner-list .inner-group img {
-  width: 80px;
-  height: auto;
-}
-
 .section-1 .inner-wrap .inner-list .inner-group label {
+  font-family: var(--font-1);
   font-size: 16px;
   font-weight: 800;
   color: #333;
   text-align: center;
 }
+
+.section-1 .inner-wrap .inner-list .inner-group .inner-sublist {
+  list-style: none;
+}
+
+.section-1 .inner-wrap .inner-list .inner-group .inner-sublist li {
+  display: none;
+}
+.section-1 .inner-wrap .inner-list .inner-group .inner-sublist.active li {
+  display: block;
+  font-family: var(--font-1);
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+  position: relative;
+  margin-bottom: 6px;
+}
+
 @media (max-width: 991.98px) {
   .section-1 .inner-wrap .inner-list {
     grid-template-columns: repeat(2, 1fr);
