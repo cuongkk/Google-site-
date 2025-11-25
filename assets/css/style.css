@@ -82,7 +82,7 @@ body {
   height: 50px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 10px;
   border-radius: 0 0 10px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -90,7 +90,7 @@ body {
 
 .header .inner-wrap .header-title {
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   font-family: var(--font-1);
   text-align: center;
@@ -122,7 +122,7 @@ body {
 .section-1 .inner-wrap .inner-list {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(1, 1fr);
   gap: 20px;
 }
 
@@ -142,7 +142,7 @@ body {
 .section-1 .inner-wrap .inner-list .inner-group label {
   font-family: var(--font-1);
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 600;
   color: #333;
   text-align: center;
 }
@@ -166,7 +166,7 @@ body {
 
 @media (max-width: 991.98px) {
   .section-1 .inner-wrap .inner-list {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(1, 1fr);
   }
 }
 

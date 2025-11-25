@@ -1,12 +1,18 @@
 const innerList = document.querySelector(".section-1 .inner-content");
+
 if (innerList) {
-  const label = innerList.querySelector(".inner-label");
-  if (label) {
-    const sublist = innerList.querySelector(".inner-sublist");
-    label.addEventListener("click", () => {
-      sublist.classList.toggle("active");
-    });
-  }
+  const sublist = innerList.querySelector(".inner-sublist");
+  innerList.addEventListener("click", () => {
+    sublist.classList.toggle("active");
+  });
+}
+const innerLink = document.querySelector(".inner-group .inner-link");
+
+if (innerLink) {
+  innerLink.addEventListener("click", () => {
+    console.log("clicked");
+    window.location.href = "https://khunghinh.net/p/daihoigialai";
+  });
 }
 // const listButton = document.querySelector(".inner-list");
 
