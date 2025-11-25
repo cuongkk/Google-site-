@@ -15,7 +15,7 @@ if (innerLink) {
   });
 }
 
-function fitToTwoLines(el, maxFont = 24, minFont = 10) {
+function fitToTwoLines(el, maxFont, minFont) {
   if (!el) return;
 
   let size = maxFont;
@@ -26,32 +26,47 @@ function fitToTwoLines(el, maxFont = 24, minFont = 10) {
   while (size > minFont) {
     const styles = window.getComputedStyle(el);
 
-    // Lấy line-height, nếu là 'normal' thì tự ước lượng
+    // lấy line-height, nếu là 'normal' thì ước lượng
     let lineHeight = parseFloat(styles.lineHeight);
     if (isNaN(lineHeight)) {
       const fontSize = parseFloat(styles.fontSize);
-      lineHeight = fontSize * 1.2; // ước lượng nhẹ
+      lineHeight = fontSize * 1.2;
     }
 
     const totalHeight = el.scrollHeight;
     const lines = Math.round(totalHeight / lineHeight);
 
-    // Nếu đã ≤ 2 dòng thì ok, thoát vòng lặp
     if (lines <= maxLines) {
-      break;
+      break; // đã còn tối đa 2 dòng
     }
 
-    // Ngược lại, giảm font rồi thử lại
     size -= 1;
     el.style.fontSize = size + "px";
   }
+
+  return size; // trả về cỡ font cuối cùng để scale logo
 }
 
 function initHeaderTitle() {
   const title = document.querySelector(".header .header-title");
-  console.log(title);
-  if (!title) return;
-  fitToTwoLines(title, 20, 0); // max = 24px, min = 12px
+  const logoImg = document.querySelector(".header .header-logo img");
+
+  if (!title || !logoImg) return;
+
+  const maxFont = 20;
+  const minFont = 12;
+  const maxLogo = 64; // logo cao nhất (px)
+  const minLogo = 32; // logo thấp nhất (px)
+
+  // 1) co chữ về tối đa 2 dòng
+  const finalFont = fitToTwoLines(title, maxFont, minFont);
+
+  // 2) scale logo theo font-size
+  const ratio = (finalFont - minFont) / (maxFont - minFont); // 0 → 1
+  let newLogoH = minLogo + (maxLogo - minLogo) * ratio;
+
+  logoImg.style.height = newLogoH + "px";
+  logoImg.style.width = "auto";
 }
 
 window.addEventListener("load", initHeaderTitle);
