@@ -54,7 +54,7 @@ function initHeaderTitle() {
   if (!title || !logoImg) return;
 
   const maxFont = 20;
-  const minFont = 12;
+  const minFont = 0;
   const maxLogo = 64; // logo cao nhất (px)
   const minLogo = 32; // logo thấp nhất (px)
 
