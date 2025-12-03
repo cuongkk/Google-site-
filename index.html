@@ -1,67 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <link rel="stylesheet" href="assets/css/style.css" />
-    <title>Tuổi trẻ Gia Lai</title>
-  </head>
-  <body>
-    <div class="header">
-      <div class="container">
-        <div class="inner-wrap">
-          <div class="header-logo">
-            <img src="assets/image/Logo.png" alt="Logo" />
-          </div>
-          <p class="header-title">ĐẠI HỘI ĐẠI BIỂU ĐOÀN TNCS HỒ CHÍ MINH TỈNH GIA LAI <br />LẦN THỨ I, NHIỆM KỲ 2025 - 2030</p>
-        </div>
-      </div>
-    </div>
-    <div class="inner-box"></div>
-    <div class="section-1">
-      <div class="container">
-        <div class="inner-wrap">
-          <div class="inner-list">
-            <div class="inner-group">
-              <label class="inner-label">Chương trình Đại hội</label>
-            </div>
-            <div class="inner-group">
-              <label class="inner-label">Quy chế Đại hội</label>
-            </div>
-            <div class="inner-content inner-group">
-              <label class="inner-label">Hệ thống văn bản </label>
-              <ul class="inner-sublist">
-                <li>Báo cáo chính trị</li>
-                <li>Báo cáo kiểm điểm</li>
-                <li>Tổng hợp ý kiến góp ý dự thảo Văn kiện Đại hội Trung ương</li>
-                <li>Dự thảo Chương trình công tác nhiệm kỳ mới</li>
-                <li>Dự thảo Nghị quyết Đại hội</li>
-                <li>Tham luận</li>
-              </ul>
-            </div>
-            <div class="inner-group">
-              <label class="inner-label">Tra cứu tài liệu</label>
-            </div>
-            <div class="inner-group">
-              <label class="inner-label">Chỗ ngồi đại biểu</label>
-            </div>
-            <div class="inner-group">
-              <label class="inner-label">Trailer Đại hội</label>
-            </div>
-            <div class="inner-group">
-              <label class="inner-label inner-link">Khung Avatar</label>
-            </div>
-            <div class="inner-group">
-              <label class="inner-label">Hình ảnh Đại hội</label>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="inner-box"></div>
-    <div class="inner-background">
-      <img src="assets/image/Background.jpg" alt="Background" />
-    </div>
-    <script src="assets/js/script.js"></script>
-  </body>
-</html>
+<input type="file" id="upload" />
+<canvas id="logoCanvas" width="500" height="500"></canvas>
+<button id="downloadBtn">Tải logo</button>
+
+<script>
+  const upload = document.getElementById("upload");
+  const canvas = document.getElementById("logoCanvas");
+  const ctx = canvas.getContext("2d");
+
+  upload.onchange = function (e) {
+    const file = e.target.files[0];
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+
+    img.onload = function () {
+      // Vẽ nền trắng
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Vẽ ảnh vào giữa
+      ctx.drawImage(img, 50, 50, 400, 400);
+
+      // Thêm chữ
+      ctx.font = "40px sans-serif";
+      ctx.fillStyle = "black";
+      ctx.fillText("My Logo", 150, 480);
+    };
+  };
+
+  document.getElementById("downloadBtn").onclick = function () {
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "logo.png";
+    a.click();
+  };
+</script>
